@@ -12,7 +12,7 @@
     cd charts/incubator
     helm create wagtail
     cd ../../
-    helm upgrade demo --namespace london --install charts/incubator/wagtaili
+    helm upgrade demo --namespace london --install charts/incubator/wagtail
 
 ## Start patching and deploying.
 
