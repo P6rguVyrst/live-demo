@@ -1,0 +1,139 @@
+---
+persistence:
+  enabled: true
+  size: 1Gi
+service:
+  type: NodePort      
+ingress:
+  enabled: false
+  annotations:
+    certmanager.k8s.io/cluster-issuer: letsencrypt-prod
+    certmanager.k8s.io/acme-challenge-type: http01
+    kubernetes.io/ingress.class: "nginx"
+    kubernetes.io/tls-acme: "true"
+    kubernetes.io/ssl-redirect: "true"
+  hosts:
+    - grafana.verypythonproblems.com
+  tls:
+    - secretName: tls-grafana-prod
+      hosts:
+        - grafana.verypythonproblems.com
+plugins: >
+  camptocamp-prometheus-alertmanager-datasource,
+  raintank-worldping-app,
+  grafana-piechart-panel
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: demo-elasticsearch
+        type: elasticsearch
+        url: "%%ELASTIC_URL%%"
+        database: "[k8s-*]YYYY.MM.DD"
+        access: proxy
+        basicAuth: true
+        basicAuthUser: "%%ELASTIC_USER%%"
+        basicAuthPassword: "%%ELASTIC_SECRET%%"
+        jsonData:
+          interval: Daily
+          timeField: "@timestamp"
+          esVersion: 70
+        orgId: 1
+        editable: true
+      - name: demo-prometheus
+        type: prometheus
+        url: http://prometheus-server.insight.svc.cluster.local
+        access: proxy
+        orgId: 1
+        isDefault: true
+        editable: true
+      - name: demo-alertmanager
+        type: camptocamp-prometheus-alertmanager-datasource
+        url: http://prometheus-alertmanager.insight.svc.cluster.local
+        access: proxy
+        basicAuth: true
+        basicAuthUser: "%%MONITORING_USER%%"
+        basicAuthPassword: "%%MONITORING_PASSWORD%%"
+        orgId: 1
+        editable: true
+dashboardProviders:
+  dashboardproviders.yaml:
+    apiVersion: 1
+    providers:
+      - name: community
+        orgId: 1
+        folder: 'Community Dashboards'
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/community
+      - name: templates
+        orgId: 1
+        folder: 'Templates'
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/templates
+dashboards:
+  community:
+    prometheus-stats:
+      gnetId: 3834
+      revision: 1
+      datasource: demo-prometheus
+    kubernetes-cluster:
+      gnetId: 6417
+      revision: 1
+      datasource: demo-prometheus
+    alertmanager-detail:
+      gnetId: 9578
+      revision: 4
+      datasource: demo-prometheus
+    alertmanager-overview:
+      gnetId: 8010
+      revision: 1
+      datasource: demo-prometheus
+  templates:
+    django-template:
+      gnetId: 9528
+      revision: 1
+      datasource: demo-prometheus
+### FIX
+grafana.ini:
+  #server:
+    #domain: grafana.insight.svc.cluster.local
+    #enforce_domain: true
+    #root_url: "http://grafana.insight.svc.cluster.local"
+  metrics:
+    enabled: true
+    basic_auth_username: "%%MONITORING_USER%%"
+    basic_auth_password: "%%MONITORING_PASSWORD%%"
+  analytics:
+    check_for_updates: true
+  grafana_net:
+    url: https://grafana.net
+  log:
+    mode: console
+    level: info
+  paths:
+    data: /var/lib/grafana/data
+    logs: /var/log/grafana
+    plugins: /var/lib/grafana/plugins
+    provisioning: /etc/grafana/provisioning
+  auth.google:
+    enabled: true
+    client_id: "%%OAUTH_ID%%"
+    client_secret: "%%OAUTH_SECRET%%"
+    scopes: "https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email"
+    auth_url: https://accounts.google.com/o/oauth2/auth
+    token_url: https://accounts.google.com/o/oauth2/token
+    allowed_domains: "verypythonproblems.com"
+    allow_sign_up: true
+  users:
+    auto_assign_org: true
+    auto_assign_org_id: 1
+    auto_assign_org_role: "Viewer"
+  session:
+    cookie_secure: true
+    session_life_time: 86400

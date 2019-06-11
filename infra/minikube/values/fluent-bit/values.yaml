@@ -1,0 +1,19 @@
+---
+backend:
+  type: es
+  es:
+    host: "%%ELASTIC_URL%%"
+    port: 9243
+    index: k8s-demo
+    logstash_prefix: k8s
+    tls: "on"
+    tls_verify: "off"
+    http_user: "%%ELASTIC_USER%%"
+    http_passwd: "%%ELASTIC_SECRET%%"
+resources:
+  limits:
+    cpu: 150m
+    memory: 100Mi
+  requests:
+    cpu: 100m
+    memory: 50Mi
