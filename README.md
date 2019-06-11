@@ -1,5 +1,7 @@
 # Instrumentation Demo:
 
+## *NB! If you are trying to run this demo, tha patches won't work if you don't have docker images present on your local machine.*
+
 ## Setup your Python Django project
 
     pip install coderedcms
