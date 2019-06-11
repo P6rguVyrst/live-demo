@@ -1,0 +1,99 @@
+diff --git a/verypythonproblems/Dockerfile b/verypythonproblems/Dockerfile
+index 5487948..b4416dc 100644
+--- a/verypythonproblems/Dockerfile
++++ b/verypythonproblems/Dockerfile
+@@ -11,6 +11,7 @@ RUN pip install gunicorn
+ COPY . /code/
+ WORKDIR /code/
+ 
++RUN python manage.py makemigrations
+ RUN python manage.py migrate
+ 
+ RUN useradd coderedcms
+diff --git a/verypythonproblems/requirements.txt b/verypythonproblems/requirements.txt
+index 8b88a0b..da4488c 100644
+--- a/verypythonproblems/requirements.txt
++++ b/verypythonproblems/requirements.txt
+@@ -1,8 +1,9 @@
+ coderedcms
++django-prometheus
+ 
+ # django_sendmail_backend enables sending email from your web host server.
+ # Remove this if using a different email backend.
+ django_sendmail_backend
+ 
+ # To use with a MySQL database (offered by most web hosts), uncomment the following.
+-#mysqlclient
+\ No newline at end of file
++#mysqlclient
+diff --git a/verypythonproblems/values.yaml b/verypythonproblems/values.yaml
+index 69b7c51..cf6788c 100644
+--- a/verypythonproblems/values.yaml
++++ b/verypythonproblems/values.yaml
+@@ -2,7 +2,7 @@
+ fullnameOverride: "web"
+ image:
+   repository: p6rguvyrst/instrumentation-demo
+-  tag: v0.0.4
++  tag: v0.0.5
+   pullPolicy: IfNotPresent
+ service:
+   type: ClusterIP
+diff --git a/verypythonproblems/verypythonproblems/settings/base.py b/verypythonproblems/verypythonproblems/settings/base.py
+index d76ec61..f6dc8d5 100644
+--- a/verypythonproblems/verypythonproblems/settings/base.py
++++ b/verypythonproblems/verypythonproblems/settings/base.py
+@@ -27,6 +27,9 @@ INSTALLED_APPS = [
+     # This project
+     'website',
+ 
++    # Instrumentation
++    'django_prometheus',
++
+     # CodeRed CMS
+     'coderedcms',
+     'bootstrap4',
+@@ -63,6 +66,11 @@ INSTALLED_APPS = [
+ ]
+ 
+ MIDDLEWARE = [
++
++    # Everything falls between
++    # PrometheusBeforeMiddleware and PrometheusAfterMiddleware
++    'django_prometheus.middleware.PrometheusBeforeMiddleware',
++
+     # Save pages to cache. Must be FIRST.
+     'wagtailcache.cache.UpdateCacheMiddleware',
+ 
+@@ -86,6 +94,8 @@ MIDDLEWARE = [
+ 
+     # Fetch from cache. Must be LAST.
+     'wagtailcache.cache.FetchFromCacheMiddleware',
++
++    'django_prometheus.middleware.PrometheusAfterMiddleware',
+ ]
+ 
+ ROOT_URLCONF = 'verypythonproblems.urls'
+@@ -114,7 +124,7 @@ WSGI_APPLICATION = 'verypythonproblems.wsgi.application'
+ 
+ DATABASES = {
+     'default': {
+-        'ENGINE': 'django.db.backends.sqlite3',
++        'ENGINE': 'django_prometheus.db.backends.sqlite3',
+         'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+     }
+ }
+diff --git a/verypythonproblems/verypythonproblems/urls.py b/verypythonproblems/verypythonproblems/urls.py
+index 1e2276c..bdc026f 100644
+--- a/verypythonproblems/verypythonproblems/urls.py
++++ b/verypythonproblems/verypythonproblems/urls.py
+@@ -17,6 +17,9 @@ urlpatterns = [
+     # Search
+     path('search/', include(coderedsearch_urls)),
+ 
++    # Instrumentation
++    path('', include('django_prometheus.urls')),
++
+     # For anything not caught by a more specific rule above, hand over to
+     # the page serving mechanism. This should be the last pattern in
+     # the list:

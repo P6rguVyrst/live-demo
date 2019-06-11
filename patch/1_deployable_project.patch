@@ -1,0 +1,80 @@
+diff --git a/charts/incubator/wagtail/templates/deployment.yaml b/charts/incubator/wagtail/templates/deployment.yaml
+index 938316b..53de42d 100644
+--- a/charts/incubator/wagtail/templates/deployment.yaml
++++ b/charts/incubator/wagtail/templates/deployment.yaml
+@@ -25,17 +25,17 @@ spec:
+           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+           imagePullPolicy: {{ .Values.image.pullPolicy }}
+           ports:
+-            - name: http
+-              containerPort: 80
++            - name: container-port
++              containerPort: {{ .Values.service.port }}
+               protocol: TCP
+           livenessProbe:
+             httpGet:
+               path: /
+-              port: http
++              port: container-port
+           readinessProbe:
+             httpGet:
+               path: /
+-              port: http
++              port: container-port
+           resources:
+             {{- toYaml .Values.resources | nindent 12 }}
+       {{- with .Values.nodeSelector }}
+diff --git a/charts/incubator/wagtail/templates/service.yaml b/charts/incubator/wagtail/templates/service.yaml
+index 91878d8..c386412 100644
+--- a/charts/incubator/wagtail/templates/service.yaml
++++ b/charts/incubator/wagtail/templates/service.yaml
+@@ -8,9 +8,9 @@ spec:
+   type: {{ .Values.service.type }}
+   ports:
+     - port: {{ .Values.service.port }}
+-      targetPort: http
++      targetPort: container-port
+       protocol: TCP
+-      name: http
++      name: exposed-service
+   selector:
+     app.kubernetes.io/name: {{ include "wagtail.name" . }}
+     app.kubernetes.io/instance: {{ .Release.Name }}
+diff --git a/verypythonproblems/values.yaml b/verypythonproblems/values.yaml
+new file mode 100644
+index 0000000..69b7c51
+--- /dev/null
++++ b/verypythonproblems/values.yaml
+@@ -0,0 +1,32 @@
++---
++fullnameOverride: "web"
++image:
++  repository: p6rguvyrst/instrumentation-demo
++  tag: v0.0.4
++  pullPolicy: IfNotPresent
++service:
++  type: ClusterIP
++  port: 8000
++#resources:
++#  limits:
++#    cpu: 200m
++#    memory: 2048Mi
++#  requests:
++#    cpu: 100m
++#    memory: 1024Mi
++##ingress:
++#  enabled: true
++#  annotations:
++#    certmanager.k8s.io/cluster-issuer: letsencrypt-prod
++#    certmanager.k8s.io/acme-challenge-type: http01
++#    kubernetes.io/ingress.class: "nginx"
++#    kubernetes.io/tls-acme: "true"
++#    kubernetes.io/ssl-redirect: "true"
++#  hosts:
++#    - host: demo.verypythonproblems.com
++#      paths:
++#        - /
++#  tls:
++#    - secretName: tls-demo-verypythonproblems
++#      hosts:
++#        - demo.verypythonproblems.com

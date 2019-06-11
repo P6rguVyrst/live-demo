@@ -1,0 +1,33 @@
+diff --git a/charts/incubator/wagtail/templates/service.yaml b/charts/incubator/wagtail/templates/service.yaml
+index c386412..6b3ad10 100644
+--- a/charts/incubator/wagtail/templates/service.yaml
++++ b/charts/incubator/wagtail/templates/service.yaml
+@@ -3,7 +3,15 @@ kind: Service
+ metadata:
+   name: {{ include "wagtail.fullname" . }}
+   labels:
++    # This is to make default Grafana dashboard 9528
++    # work out of the box.
++    app: {{ include "wagtail.fullname" . }}
+ {{ include "wagtail.labels" . | indent 4 }}
++  annotations:
++    prometheus.path: "/metrics"
++    prometheus.scrape: "true"
++    prometheus.port: "8000"
++    prometheus.scheme: "http"
+ spec:
+   type: {{ .Values.service.type }}
+   ports:
+diff --git a/verypythonproblems/values.yaml b/verypythonproblems/values.yaml
+index cf6788c..b1b6da6 100644
+--- a/verypythonproblems/values.yaml
++++ b/verypythonproblems/values.yaml
+@@ -2,7 +2,7 @@
+ fullnameOverride: "web"
+ image:
+   repository: p6rguvyrst/instrumentation-demo
+-  tag: v0.0.5
++  tag: v0.0.6
+   pullPolicy: IfNotPresent
+ service:
+   type: ClusterIP

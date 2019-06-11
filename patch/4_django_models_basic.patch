@@ -1,0 +1,101 @@
+diff --git a/verypythonproblems/values.yaml b/verypythonproblems/values.yaml
+index b1b6da6..6241d12 100644
+--- a/verypythonproblems/values.yaml
++++ b/verypythonproblems/values.yaml
+@@ -2,7 +2,7 @@
+ fullnameOverride: "web"
+ image:
+   repository: p6rguvyrst/instrumentation-demo
+-  tag: v0.0.6
++  tag: v0.0.7
+   pullPolicy: IfNotPresent
+ service:
+   type: ClusterIP
+diff --git a/verypythonproblems/verypythonproblems/instrumentation/__init__.py b/verypythonproblems/verypythonproblems/instrumentation/__init__.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/verypythonproblems/verypythonproblems/instrumentation/labels.py b/verypythonproblems/verypythonproblems/instrumentation/labels.py
+new file mode 100644
+index 0000000..a8e46ae
+--- /dev/null
++++ b/verypythonproblems/verypythonproblems/instrumentation/labels.py
+@@ -0,0 +1,11 @@
++"""
++Single source of truth for metrics labels.
++
++"""
++
++ARTICLE = "article"
++ARTICLE_INDEX = "article-index"
++FORM = "form"
++FORM_FIELD = "form-field"
++EMAIL = "email"
++WEBPAGE = "webpage"
+diff --git a/verypythonproblems/website/models.py b/verypythonproblems/website/models.py
+index 7734c14..0cda806 100644
+--- a/verypythonproblems/website/models.py
++++ b/verypythonproblems/website/models.py
+@@ -10,9 +10,18 @@ from coderedcms.models import (
+     CoderedFormPage,
+     CoderedWebPage
+ )
++from django_prometheus.models import ExportModelOperationsMixin
++from verypythonproblems.instrumentation.labels import (
++    ARTICLE,
++    ARTICLE_INDEX,
++    FORM,
++    FORM_FIELD,
++    EMAIL,
++    WEBPAGE,
++)
+ 
+ 
+-class ArticlePage(CoderedArticlePage):
++class ArticlePage(ExportModelOperationsMixin(ARTICLE), CoderedArticlePage):
+     """
+     Article, suitable for news or blog content.
+     """
+@@ -28,7 +37,7 @@ class ArticlePage(CoderedArticlePage):
+     search_template = 'coderedcms/pages/article_page.search.html'
+ 
+ 
+-class ArticleIndexPage(CoderedArticleIndexPage):
++class ArticleIndexPage(ExportModelOperationsMixin(ARTICLE_INDEX), CoderedArticleIndexPage):
+     """
+     Shows a list of article sub-pages.
+     """
+@@ -44,7 +53,7 @@ class ArticleIndexPage(CoderedArticleIndexPage):
+     template = 'coderedcms/pages/article_index_page.html'
+ 
+ 
+-class FormPage(CoderedFormPage):
++class FormPage(ExportModelOperationsMixin(FORM), CoderedFormPage):
+     """
+     A page with an html <form>.
+     """
+@@ -54,7 +63,7 @@ class FormPage(CoderedFormPage):
+     template = 'coderedcms/pages/form_page.html'
+ 
+ 
+-class FormPageField(CoderedFormField):
++class FormPageField(ExportModelOperationsMixin(FORM_FIELD), CoderedFormField):
+     """
+     A field that links to a FormPage.
+     """
+@@ -63,14 +72,14 @@ class FormPageField(CoderedFormField):
+ 
+     page = ParentalKey('FormPage', related_name='form_fields')
+ 
+-class FormConfirmEmail(CoderedEmail):
++class FormConfirmEmail(ExportModelOperationsMixin(EMAIL), CoderedEmail):
+     """
+     Sends a confirmation email after submitting a FormPage.
+     """
+     page = ParentalKey('FormPage', related_name='confirmation_emails')
+ 
+ 
+-class WebPage(CoderedWebPage):
++class WebPage(ExportModelOperationsMixin(WEBPAGE), CoderedWebPage):
+     """
+     General use page with featureful streamfield and SEO attributes.
+     Template renders all Navbar and Footer snippets in existance.
