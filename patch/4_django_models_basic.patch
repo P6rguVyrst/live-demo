@@ -8,9 +8,9 @@ index b1b6da6..6241d12 100644
    repository: p6rguvyrst/instrumentation-demo
 -  tag: v0.0.6
 +  tag: v0.0.7
-   pullPolicy: IfNotPresent
+   pullPolicy: Never
  service:
-   type: ClusterIP
+   type: NodePort
 diff --git a/verypythonproblems/verypythonproblems/instrumentation/__init__.py b/verypythonproblems/verypythonproblems/instrumentation/__init__.py
 new file mode 100644
 index 0000000..e69de29

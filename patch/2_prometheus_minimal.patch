@@ -36,9 +36,9 @@ index 69b7c51..cf6788c 100644
    repository: p6rguvyrst/instrumentation-demo
 -  tag: v0.0.4
 +  tag: v0.0.5
-   pullPolicy: IfNotPresent
+   pullPolicy: Never
  service:
-   type: ClusterIP
+   type: NodePort
 diff --git a/verypythonproblems/verypythonproblems/settings/base.py b/verypythonproblems/verypythonproblems/settings/base.py
 index d76ec61..f6dc8d5 100644
 --- a/verypythonproblems/verypythonproblems/settings/base.py

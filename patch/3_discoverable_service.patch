@@ -28,6 +28,6 @@ index cf6788c..b1b6da6 100644
    repository: p6rguvyrst/instrumentation-demo
 -  tag: v0.0.5
 +  tag: v0.0.6
-   pullPolicy: IfNotPresent
+   pullPolicy: Never
  service:
-   type: ClusterIP
+   type: NodePort

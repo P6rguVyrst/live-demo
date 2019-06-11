@@ -19,9 +19,9 @@ index 6241d12..78b42cc 100644
    repository: p6rguvyrst/instrumentation-demo
 -  tag: v0.0.7
 +  tag: v0.0.8
-   pullPolicy: IfNotPresent
+   pullPolicy: Never
  service:
-   type: ClusterIP
+   type: NodePort
 diff --git a/verypythonproblems/verypythonproblems/instrumentation/monitor.py b/verypythonproblems/verypythonproblems/instrumentation/monitor.py
 new file mode 100644
 index 0000000..d910265

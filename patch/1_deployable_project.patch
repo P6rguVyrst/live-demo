@@ -51,9 +51,9 @@ index 0000000..69b7c51
 +image:
 +  repository: p6rguvyrst/instrumentation-demo
 +  tag: v0.0.4
-+  pullPolicy: IfNotPresent
++  pullPolicy: Never
 +service:
-+  type: ClusterIP
++  type: NodePort
 +  port: 8000
 +#resources:
 +#  limits:

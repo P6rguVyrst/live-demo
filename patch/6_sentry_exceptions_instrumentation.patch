@@ -47,9 +47,9 @@ index 78b42cc..39680a8 100644
    repository: p6rguvyrst/instrumentation-demo
 -  tag: v0.0.8
 +  tag: v0.0.9
-   pullPolicy: IfNotPresent
+   pullPolicy: Never
  service:
-   type: ClusterIP
+   type: NodePort
    port: 8000
 +environment:
 +  variables:
