@@ -1,0 +1,264 @@
+diff --git a/requirements.txt b/requirements.txt
+index f05afa8..ea4dc02 100644
+--- a/requirements.txt
++++ b/requirements.txt
+@@ -7,4 +7,5 @@ django_sendmail_backend
+ # To use with a MySQL database (offered by most web hosts), uncomment the following.
+ #mysqlclient
+ django-prometheus
++prometheus_client
+ sentry-sdk==0.9.0
+diff --git a/values.yaml b/values.yaml
+index 2c275a0..ad58976 100644
+--- a/values.yaml
++++ b/values.yaml
+@@ -2,7 +2,7 @@
+ fullnameOverride: "web"
+ image:
+   repository: p6rguvyrst/demo-instrumentation
+-  tag: v0.1.6
++  tag: v0.1.7
+   pullPolicy: Always
+ environment:
+   variables:
+@@ -11,7 +11,6 @@ environment:
+ service:
+   type: ClusterIP
+   port: 8000
+----
+ ingress:
+   enabled: false
+   annotations:
+@@ -28,11 +27,10 @@ ingress:
+     - secretName: tls-demo-verypythonproblems
+       hosts:
+         - demo.verypythonproblems.com
+----
+ resources:
+   limits:
+-    cpu: 200m
+-    memory: 256Mi
++    cpu: 400m
++    memory: 2048Mi
+   requests:
+-    cpu: 100m
+-    memory: 128Mi
++    cpu: 200m
++    memory: 1024Mi
+diff --git a/verypythonproblems/features.py b/verypythonproblems/features.py
+index 5b951d4..ac2ecf2 100644
+--- a/verypythonproblems/features.py
++++ b/verypythonproblems/features.py
+@@ -1,5 +1,16 @@
+ from .exceptions import VeryPythonException
+-
++from .instrumentation.prometheus.monitor import (
++   models_gauge_monitor,
++)
++from django.http import HttpResponse
++import prometheus_client
+ 
+ def trigger_error(request):
+     raise VeryPythonException("When things go wrong...")
++
++
++def custom_instrumentation_monitor(request):
++    models_gauge_monitor()
++    return HttpResponse(
++        prometheus_client.generate_latest(), content_type="text/plain"
++    )
+diff --git a/verypythonproblems/instrumentation/__init__.py b/verypythonproblems/instrumentation/__init__.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/verypythonproblems/instrumentation/labels.py b/verypythonproblems/instrumentation/labels.py
+new file mode 100644
+index 0000000..a8e46ae
+--- /dev/null
++++ b/verypythonproblems/instrumentation/labels.py
+@@ -0,0 +1,11 @@
++"""
++Single source of truth for metrics labels.
++
++"""
++
++ARTICLE = "article"
++ARTICLE_INDEX = "article-index"
++FORM = "form"
++FORM_FIELD = "form-field"
++EMAIL = "email"
++WEBPAGE = "webpage"
+diff --git a/verypythonproblems/instrumentation/prometheus/__init__.py b/verypythonproblems/instrumentation/prometheus/__init__.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/verypythonproblems/instrumentation/prometheus/metrics.py b/verypythonproblems/instrumentation/prometheus/metrics.py
+new file mode 100644
+index 0000000..5b3ad1d
+--- /dev/null
++++ b/verypythonproblems/instrumentation/prometheus/metrics.py
+@@ -0,0 +1,12 @@
++from prometheus_client import Gauge
++
++"""
++"""
++
++
++class ModelsGauges:
++    """Monitoring definitions for Prometheus data format."""
++
++    django_model_objects = Gauge(
++        "django_model_count_total", "model label objects in database.", ["model"]
++    )
+diff --git a/verypythonproblems/instrumentation/prometheus/monitor.py b/verypythonproblems/instrumentation/prometheus/monitor.py
+new file mode 100644
+index 0000000..cef8a8e
+--- /dev/null
++++ b/verypythonproblems/instrumentation/prometheus/monitor.py
+@@ -0,0 +1,22 @@
++from .metrics import ModelsGauges
++from ..query_sets import (
++    ARTICLE_PAGE_COUNT,
++    ARTICLE_INDEX_PAGE_COUNT,
++    FORM_PAGE_COUNT,
++    FORM_PAGE_FIELD_COUNT,
++    FORM_CONFIRM_EMAIL_COUNT,
++    WEB_PAGE_COUNT,
++)
++from ..labels import ARTICLE, ARTICLE_INDEX, FORM, FORM_FIELD, EMAIL, WEBPAGE
++
++GAUGE = ModelsGauges()
++
++
++def models_gauge_monitor():
++
++    GAUGE.django_model_objects.labels(ARTICLE).set(ARTICLE_PAGE_COUNT)
++    GAUGE.django_model_objects.labels(ARTICLE_INDEX).set(ARTICLE_INDEX_PAGE_COUNT)
++    GAUGE.django_model_objects.labels(FORM).set(FORM_PAGE_COUNT)
++    GAUGE.django_model_objects.labels(FORM_FIELD).set(FORM_PAGE_FIELD_COUNT)
++    GAUGE.django_model_objects.labels(EMAIL).set(FORM_CONFIRM_EMAIL_COUNT)
++    GAUGE.django_model_objects.labels(WEBPAGE).set(WEB_PAGE_COUNT)
+diff --git a/verypythonproblems/instrumentation/query_sets.py b/verypythonproblems/instrumentation/query_sets.py
+new file mode 100644
+index 0000000..6858ba1
+--- /dev/null
++++ b/verypythonproblems/instrumentation/query_sets.py
+@@ -0,0 +1,33 @@
++from website.models import (
++    ArticlePage,
++    ArticleIndexPage,
++    FormPage,
++    FormPageField,
++    FormConfirmEmail,
++    WebPage,
++)
++
++"""
++QuerySet: https://docs.djangoproject.com/en/2.1/ref/models/querysets/
++
++Internally, a QuerySet can be constructed, filtered,
++sliced, and generally passed around without actually
++hitting the database. No database activity actually
++occurs until you do something to evaluate the queryset.
++
++Note: If you only need to determine the number of records
++in the set (and don’t need the actual objects), it’s much
++more efficient to handle a count at the database level
++using SQL’s SELECT COUNT(*). Django provides a count()
++method for precisely this reason.
++
++object.count(): https://docs.djangoproject.com/en/2.1/ref/models/querysets/#django.db.models.query.QuerySet.count
++
++"""
++
++ARTICLE_PAGE_COUNT = ArticlePage.objects.count()
++ARTICLE_INDEX_PAGE_COUNT = ArticleIndexPage.objects.count()
++FORM_PAGE_COUNT = FormPage.objects.count()
++FORM_PAGE_FIELD_COUNT = FormPageField.objects.count()
++FORM_CONFIRM_EMAIL_COUNT = FormConfirmEmail.objects.count()
++WEB_PAGE_COUNT = WebPage.objects.count()
+diff --git a/verypythonproblems/urls.py b/verypythonproblems/urls.py
+index f0ccc45..7aaa343 100644
+--- a/verypythonproblems/urls.py
++++ b/verypythonproblems/urls.py
+@@ -7,6 +7,7 @@ from coderedcms import search_urls as coderedsearch_urls
+ from coderedcms import urls as codered_urls
+ from verypythonproblems.features import (
+     trigger_error,
++    custom_instrumentation_monitor,
+ )
+ 
+ 
+@@ -24,6 +25,7 @@ urlpatterns = [
+     # Instrumentation
+     path('', include('django_prometheus.urls')),
+     path('sentry-debug', trigger_error),
++    path('instrumentation', custom_instrumentation_monitor),
+ 
+     # For anything not caught by a more specific rule above, hand over to
+     # the page serving mechanism. This should be the last pattern in
+diff --git a/website/models.py b/website/models.py
+index 2e09824..0cda806 100644
+--- a/website/models.py
++++ b/website/models.py
+@@ -11,9 +11,17 @@ from coderedcms.models import (
+     CoderedWebPage
+ )
+ from django_prometheus.models import ExportModelOperationsMixin
++from verypythonproblems.instrumentation.labels import (
++    ARTICLE,
++    ARTICLE_INDEX,
++    FORM,
++    FORM_FIELD,
++    EMAIL,
++    WEBPAGE,
++)
+ 
+ 
+-class ArticlePage(ExportModelOperationsMixin('article'), CoderedArticlePage):
++class ArticlePage(ExportModelOperationsMixin(ARTICLE), CoderedArticlePage):
+     """
+     Article, suitable for news or blog content.
+     """
+@@ -29,7 +37,7 @@ class ArticlePage(ExportModelOperationsMixin('article'), CoderedArticlePage):
+     search_template = 'coderedcms/pages/article_page.search.html'
+ 
+ 
+-class ArticleIndexPage(ExportModelOperationsMixin('article-index'), CoderedArticleIndexPage):
++class ArticleIndexPage(ExportModelOperationsMixin(ARTICLE_INDEX), CoderedArticleIndexPage):
+     """
+     Shows a list of article sub-pages.
+     """
+@@ -45,7 +53,7 @@ class ArticleIndexPage(ExportModelOperationsMixin('article-index'), CoderedArtic
+     template = 'coderedcms/pages/article_index_page.html'
+ 
+ 
+-class FormPage(ExportModelOperationsMixin('form'), CoderedFormPage):
++class FormPage(ExportModelOperationsMixin(FORM), CoderedFormPage):
+     """
+     A page with an html <form>.
+     """
+@@ -55,7 +63,7 @@ class FormPage(ExportModelOperationsMixin('form'), CoderedFormPage):
+     template = 'coderedcms/pages/form_page.html'
+ 
+ 
+-class FormPageField(ExportModelOperationsMixin('form-field'), CoderedFormField):
++class FormPageField(ExportModelOperationsMixin(FORM_FIELD), CoderedFormField):
+     """
+     A field that links to a FormPage.
+     """
+@@ -64,14 +72,14 @@ class FormPageField(ExportModelOperationsMixin('form-field'), CoderedFormField):
+ 
+     page = ParentalKey('FormPage', related_name='form_fields')
+ 
+-class FormConfirmEmail(ExportModelOperationsMixin('email'), CoderedEmail):
++class FormConfirmEmail(ExportModelOperationsMixin(EMAIL), CoderedEmail):
+     """
+     Sends a confirmation email after submitting a FormPage.
+     """
+     page = ParentalKey('FormPage', related_name='confirmation_emails')
+ 
+ 
+-class WebPage(ExportModelOperationsMixin('webpage'), CoderedWebPage):
++class WebPage(ExportModelOperationsMixin(WEBPAGE), CoderedWebPage):
+     """
+     General use page with featureful streamfield and SEO attributes.
+     Template renders all Navbar and Footer snippets in existance.
