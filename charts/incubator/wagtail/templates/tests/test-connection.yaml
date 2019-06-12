@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "wagtail.fullname" . }}-test-connection"
+  labels:
+{{ include "wagtail.labels" . | indent 4 }}
+  annotations:
+    "helm.sh/hook": test-success
+spec:
+  containers:
+    - name: wget
+      image: busybox
+      command: ['wget']
+      args:  ['{{ include "wagtail.fullname" . }}:{{ .Values.service.port }}']
+  restartPolicy: Never

@@ -1,6 +1,6 @@
 # Instrumentation Demo:
 
-## *NB! If you are trying to run this demo, the patches won't work if you don't have docker images present on your local machine.*
+## *NB! This is the end result of the demo, if you want to follow through the steps, you might want to use master branch.*
 
 ## Install Prometheus:
 

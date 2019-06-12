@@ -1,0 +1,2 @@
+class VeryPythonException(Exception):
+    pass

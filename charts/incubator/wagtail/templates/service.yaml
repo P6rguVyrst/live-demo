@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "wagtail.fullname" . }}
+  labels:
+    # This is to make default Grafana dashboard 9528
+    # work out of the box.
+    app: {{ include "wagtail.fullname" . }}
+{{ include "wagtail.labels" . | indent 4 }}
+  annotations:
+    prometheus.path: "/metrics"
+    prometheus.scrape: "true"
+    prometheus.port: "8000"
+    prometheus.scheme: "http"
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: container-port
+      protocol: TCP
+      name: exposed-service
+  selector:
+    app.kubernetes.io/name: {{ include "wagtail.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
