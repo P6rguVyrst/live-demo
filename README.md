@@ -2,6 +2,23 @@
 
 ## *NB! If you are trying to run this demo, tha patches won't work if you don't have docker images present on your local machine.*
 
+## Install Prometheus:
+
+    helm upgrade prometheus --namespace insight stable/prometheus --install -f infra/minikube/values/prometheus/values.yaml
+
+## Install Grafana
+
+    cat minikube/values/grafana/values.yaml | \
+    sed "s#%%ELASTIC_USER%%#<VARIABLE>#g" | \
+    sed "s#%%ELASTIC_SECRET%%#<VARIABLE>#g" | \
+    sed "s#%%ELASTIC_URL%%#<VARIABLE>#g" | \
+    sed "s#%%MONITORING_USER%%#<VARIABLE>#g" | \
+    sed "s#%%MONITORING_PASSWORD%%#<VARIABLE>#g" | \
+    sed "s#%%OAUTH_ID%%#<VARIABLE>#g" | \
+    sed "s#%%OAUTH_SECRET%%#<VARIABLE>#g" | \
+    helm upgrade grafana --namespace insight --version 3.3.10 --install stable/grafana -f -
+
+
 ## Setup your Python Django project
 
     pip install coderedcms
