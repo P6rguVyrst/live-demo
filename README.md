@@ -18,7 +18,7 @@
 
 ## Start patching and deploying.
 
-    git apply patcch/2_working_helm_chart.patch
+    git apply patcch/1_deployable_project.patch
     ...
 
 ## Step 3: Means of deploying OUR code (v0.0.3 - v0.0.8)
