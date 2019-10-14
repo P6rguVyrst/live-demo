@@ -1,0 +1,166 @@
+diff --git a/instrumentation/instrumentation/instrumentation/monitor.py b/instrumentation/instrumentation/instrumentation/monitor.py
+new file mode 100644
+index 0000000..d910265
+--- /dev/null
++++ b/instrumentation/instrumentation/instrumentation/monitor.py
+@@ -0,0 +1,7 @@
++from .prometheus.monitor import models_gauge_monitor
++import django_prometheus
++
++
++def prometheus_monitor(request):
++    models_gauge_monitor()
++    return django_prometheus.exports.ExportToDjangoView(request)
+diff --git a/instrumentation/instrumentation/instrumentation/prometheus/__init__.py b/instrumentation/instrumentation/instrumentation/prometheus/__init__.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/instrumentation/instrumentation/instrumentation/prometheus/metrics.py b/instrumentation/instrumentation/instrumentation/prometheus/metrics.py
+new file mode 100644
+index 0000000..19f1561
+--- /dev/null
++++ b/instrumentation/instrumentation/instrumentation/prometheus/metrics.py
+@@ -0,0 +1,14 @@
++from prometheus_client import Gauge
++
++"""
++Prometheus Business Metrics instrumentation.
++Reference: https://github.com/prometheus/client_python
++"""
++
++
++class ModelsGauges:
++    """Monitoring definitions for Prometheus data format."""
++
++    django_model_objects = Gauge(
++        "django_model_count_total", "model label objects in database.", ["model"]
++    )
+diff --git a/instrumentation/instrumentation/instrumentation/prometheus/monitor.py b/instrumentation/instrumentation/instrumentation/prometheus/monitor.py
+new file mode 100644
+index 0000000..085b914
+--- /dev/null
++++ b/instrumentation/instrumentation/instrumentation/prometheus/monitor.py
+@@ -0,0 +1,40 @@
++from .metrics import ModelsGauges
++from ..query_sets import (
++    ARTICLE_PAGE,
++    ARTICLE_INDEX_PAGE,
++    FORM_PAGE,
++    FORM_PAGE_FIELD,
++    FORM_CONFIRM_EMAIL,
++    WEB_PAGE,
++)
++from ..labels import (
++    ARTICLE,
++    ARTICLE_INDEX,
++    FORM,
++    FORM_FIELD,
++    EMAIL,
++    WEBPAGE,
++)
++GAUGE = ModelsGauges()
++
++
++def models_gauge_monitor():
++
++    GAUGE.django_model_objects.labels(ARTICLE).set(
++        ARTICLE_PAGE.count()
++    )
++    GAUGE.django_model_objects.labels(ARTICLE_INDEX).set(
++        ARTICLE_INDEX_PAGE.count()
++    )
++    GAUGE.django_model_objects.labels(FORM).set(
++        FORM_PAGE.count()
++    )
++    GAUGE.django_model_objects.labels(FORM_FIELD).set(
++        FORM_PAGE_FIELD.count()
++    )
++    GAUGE.django_model_objects.labels(EMAIL).set(
++        FORM_CONFIRM_EMAIL.count()
++    )
++    GAUGE.django_model_objects.labels(WEBPAGE).set(
++        WEB_PAGE.count()
++    )
+diff --git a/instrumentation/instrumentation/instrumentation/query_sets.py b/instrumentation/instrumentation/instrumentation/query_sets.py
+new file mode 100644
+index 0000000..a2f841f
+--- /dev/null
++++ b/instrumentation/instrumentation/instrumentation/query_sets.py
+@@ -0,0 +1,33 @@
++from website.models import (
++    ArticlePage,
++    ArticleIndexPage,
++    FormPage,
++    FormPageField,
++    FormConfirmEmail,
++    WebPage,
++)
++
++"""
++QuerySet: https://docs.djangoproject.com/en/2.1/ref/models/querysets/
++
++Internally, a QuerySet can be constructed, filtered,
++sliced, and generally passed around without actually
++hitting the database. No database activity actually
++occurs until you do something to evaluate the queryset.
++
++Note: If you only need to determine the number of records
++in the set (and don’t need the actual objects), it’s much
++more efficient to handle a count at the database level
++using SQL’s SELECT COUNT(*). Django provides a count()
++method for precisely this reason.
++
++object.count(): https://docs.djangoproject.com/en/2.1/ref/models/querysets/#django.db.models.query.QuerySet.count
++
++"""
++
++ARTICLE_PAGE = ArticlePage.objects
++ARTICLE_INDEX_PAGE = ArticleIndexPage.objects
++FORM_PAGE = FormPage.objects
++FORM_PAGE_FIELD = FormPageField.objects
++FORM_CONFIRM_EMAIL = FormConfirmEmail.objects
++WEB_PAGE = WebPage.objects
+diff --git a/instrumentation/instrumentation/urls.py b/instrumentation/instrumentation/urls.py
+index fabffe0..c4a789e 100644
+--- a/instrumentation/instrumentation/urls.py
++++ b/instrumentation/instrumentation/urls.py
+@@ -5,6 +5,7 @@ from wagtail.documents import urls as wagtaildocs_urls
+ from coderedcms import admin_urls as coderedadmin_urls
+ from coderedcms import search_urls as coderedsearch_urls
+ from coderedcms import urls as codered_urls
++from instrumentation.instrumentation.monitor import prometheus_monitor
+ 
+ urlpatterns = [
+     # Admin
+@@ -18,7 +19,7 @@ urlpatterns = [
+     path('search/', include(coderedsearch_urls)),
+ 
+     # Instrumentation
+-    path('', include('django_prometheus.urls')),
++    path('metrics', prometheus_monitor, name='prometheus-django-metrics'),
+ 
+     # For anything not caught by a more specific rule above, hand over to
+     # the page serving mechanism. This should be the last pattern in
+diff --git a/instrumentation/requirements.txt b/instrumentation/requirements.txt
+index da4488c..34ae1b9 100644
+--- a/instrumentation/requirements.txt
++++ b/instrumentation/requirements.txt
+@@ -1,5 +1,6 @@
+ coderedcms
+ django-prometheus
++prometheus_client
+ 
+ # django_sendmail_backend enables sending email from your web host server.
+ # Remove this if using a different email backend.
+diff --git a/instrumentation/values.yaml b/instrumentation/values.yaml
+index d318940..3877c36 100644
+--- a/instrumentation/values.yaml
++++ b/instrumentation/values.yaml
+@@ -1,7 +1,7 @@
+ fullnameOverride: "web"
+ image:
+   repository: p6rguvyrst/demo
+-  tag: v0.3.4
++  tag: v0.3.5
+   pullPolicy: IfNotPresent
+ service:
+   type: ClusterIP

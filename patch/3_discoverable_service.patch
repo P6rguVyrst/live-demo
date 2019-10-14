@@ -1,14 +1,10 @@
-diff --git a/charts/incubator/wagtail/templates/service.yaml b/charts/incubator/wagtail/templates/service.yaml
-index c386412..6b3ad10 100644
---- a/charts/incubator/wagtail/templates/service.yaml
-+++ b/charts/incubator/wagtail/templates/service.yaml
-@@ -3,7 +3,15 @@ kind: Service
- metadata:
+diff --git a/instrumentation/charts/incubator/wagtail/templates/service.yaml b/instrumentation/charts/incubator/wagtail/templates/service.yaml
+index c386412..db9e8ca 100644
+--- a/instrumentation/charts/incubator/wagtail/templates/service.yaml
++++ b/instrumentation/charts/incubator/wagtail/templates/service.yaml
+@@ -4,6 +4,11 @@ metadata:
    name: {{ include "wagtail.fullname" . }}
    labels:
-+    # This is to make default Grafana dashboard 9528
-+    # work out of the box.
-+    app: {{ include "wagtail.fullname" . }}
  {{ include "wagtail.labels" . | indent 4 }}
 +  annotations:
 +    prometheus.path: "/metrics"
@@ -18,16 +14,16 @@ index c386412..6b3ad10 100644
  spec:
    type: {{ .Values.service.type }}
    ports:
-diff --git a/verypythonproblems/values.yaml b/verypythonproblems/values.yaml
-index cf6788c..b1b6da6 100644
---- a/verypythonproblems/values.yaml
-+++ b/verypythonproblems/values.yaml
-@@ -2,7 +2,7 @@
+diff --git a/instrumentation/values.yaml b/instrumentation/values.yaml
+index f1d3180..d9965ab 100644
+--- a/instrumentation/values.yaml
++++ b/instrumentation/values.yaml
+@@ -1,7 +1,7 @@
  fullnameOverride: "web"
  image:
-   repository: p6rguvyrst/instrumentation-demo
--  tag: v0.0.5
-+  tag: v0.0.6
-   pullPolicy: Never
+   repository: p6rguvyrst/demo
+-  tag: v0.3.2
++  tag: v0.3.3
+   pullPolicy: IfNotPresent
  service:
-   type: NodePort
+   type: ClusterIP

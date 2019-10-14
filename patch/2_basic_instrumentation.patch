@@ -1,0 +1,105 @@
+diff --git a/instrumentation/Dockerfile b/instrumentation/Dockerfile
+index 73c2bb5..4d2b526 100644
+--- a/instrumentation/Dockerfile
++++ b/instrumentation/Dockerfile
+@@ -1,4 +1,4 @@
+-FROM python:3.6
++FROM python:3.6-slim
+ LABEL maintainer="instrumentation"
+ 
+ ENV PYTHONUNBUFFERED 1
+@@ -11,6 +11,7 @@ RUN pip install gunicorn
+ COPY . /code/
+ WORKDIR /code/
+ 
++RUN python manage.py makemigrations
+ RUN python manage.py migrate
+ 
+ RUN useradd coderedcms
+diff --git a/instrumentation/instrumentation/settings/base.py b/instrumentation/instrumentation/settings/base.py
+index f755800..7c2b306 100644
+--- a/instrumentation/instrumentation/settings/base.py
++++ b/instrumentation/instrumentation/settings/base.py
+@@ -28,6 +28,9 @@ INSTALLED_APPS = [
+     # This project
+     'website',
+ 
++    # Instrumentation
++    'django_prometheus',
++
+     # CodeRed CMS
+     'coderedcms',
+     'bootstrap4',
+@@ -64,6 +67,11 @@ INSTALLED_APPS = [
+ ]
+ 
+ MIDDLEWARE = [
++
++    # Everything falls between
++    # PrometheusBeforeMiddleware and PrometheusAfterMiddleware
++    'django_prometheus.middleware.PrometheusBeforeMiddleware',
++
+     # Save pages to cache. Must be FIRST.
+     'wagtailcache.cache.UpdateCacheMiddleware',
+ 
+@@ -87,6 +95,8 @@ MIDDLEWARE = [
+ 
+     # Fetch from cache. Must be LAST.
+     'wagtailcache.cache.FetchFromCacheMiddleware',
++
++    'django_prometheus.middleware.PrometheusAfterMiddleware',
+ ]
+ 
+ ROOT_URLCONF = 'instrumentation.urls'
+@@ -115,7 +125,7 @@ WSGI_APPLICATION = 'instrumentation.wsgi.application'
+ 
+ DATABASES = {
+     'default': {
+-        'ENGINE': 'django.db.backends.sqlite3',
++        'ENGINE': 'django_prometheus.db.backends.sqlite3',
+         'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+     }
+ }
+diff --git a/instrumentation/instrumentation/urls.py b/instrumentation/instrumentation/urls.py
+index c59759a..fabffe0 100644
+--- a/instrumentation/instrumentation/urls.py
++++ b/instrumentation/instrumentation/urls.py
+@@ -17,6 +17,9 @@ urlpatterns = [
+     # Search
+     path('search/', include(coderedsearch_urls)),
+ 
++    # Instrumentation
++    path('', include('django_prometheus.urls')),
++
+     # For anything not caught by a more specific rule above, hand over to
+     # the page serving mechanism. This should be the last pattern in
+     # the list:
+diff --git a/instrumentation/requirements.txt b/instrumentation/requirements.txt
+index 8b88a0b..da4488c 100644
+--- a/instrumentation/requirements.txt
++++ b/instrumentation/requirements.txt
+@@ -1,8 +1,9 @@
+ coderedcms
++django-prometheus
+ 
+ # django_sendmail_backend enables sending email from your web host server.
+ # Remove this if using a different email backend.
+ django_sendmail_backend
+ 
+ # To use with a MySQL database (offered by most web hosts), uncomment the following.
+-#mysqlclient
+\ No newline at end of file
++#mysqlclient
+diff --git a/instrumentation/values.yaml b/instrumentation/values.yaml
+index e64c153..f1d3180 100644
+--- a/instrumentation/values.yaml
++++ b/instrumentation/values.yaml
+@@ -1,7 +1,7 @@
+ fullnameOverride: "web"
+ image:
+   repository: p6rguvyrst/demo
+-  tag: v0.3.0
++  tag: v0.3.2
+   pullPolicy: IfNotPresent
+ service:
+   type: ClusterIP

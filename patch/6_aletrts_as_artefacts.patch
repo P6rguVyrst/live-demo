@@ -1,0 +1,58 @@
+diff --git a/instrumentation/charts/incubator/wagtail/templates/alerts/example.yaml b/instrumentation/charts/incubator/wagtail/templates/alerts/example.yaml
+new file mode 100644
+index 0000000..d448b8d
+--- /dev/null
++++ b/instrumentation/charts/incubator/wagtail/templates/alerts/example.yaml
+@@ -0,0 +1,24 @@
++{{ if .Values.defaultRules.enabled }}
++apiVersion: monitoring.coreos.com/v1
++kind: PrometheusRule
++metadata:
++  name: {{ printf "%s-%s" (include "wagtail.fullname" .) "general.rules" | trunc 63 | trimSuffix "-" }}
++  labels:
++{{ include "wagtail.labels" . | indent 4 }}
++{{- if .Values.defaultRules.annotations }}
++  annotations:
++    {{- toYaml .Values.defaultRules.annotations | nindent 4 }}
++{{- end }}
++spec:
++  groups:
++    - name: demo.general.rules
++      rules:
++        - alert: PythonInstrumentationExampleAlert
++          annotations:
++            message: "test"
++            {{- toYaml .Values.defaultRules.annotations | nindent 12 }}
++          expr: django_http_responses_total_by_status_total{namespace="{{ .Release.Namespace }}", status=~"2.+", app_kubernetes_io_name="{{ include "wagtail.name" . }}"} > 1 
++          for: 5m
++          labels:
++            severity: warning
++{{ end }}
+diff --git a/instrumentation/charts/incubator/wagtail/values.yaml b/instrumentation/charts/incubator/wagtail/values.yaml
+index ba4cba9..98df386 100644
+--- a/instrumentation/charts/incubator/wagtail/values.yaml
++++ b/instrumentation/charts/incubator/wagtail/values.yaml
+@@ -12,6 +12,9 @@ image:
+ imagePullSecrets: []
+ nameOverride: ""
+ fullnameOverride: ""
++defaultRules:
++  enabled: true
++  annotations: {}
+ 
+ service:
+   type: ClusterIP
+diff --git a/instrumentation/values.yaml b/instrumentation/values.yaml
+index 3877c36..3de481a 100644
+--- a/instrumentation/values.yaml
++++ b/instrumentation/values.yaml
+@@ -3,6 +3,9 @@ image:
+   repository: p6rguvyrst/demo
+   tag: v0.3.5
+   pullPolicy: IfNotPresent
++defaultRules:
++  annotations:
++    contactEmail: "toomas.ormisson@navenio.com"
+ service:
+   type: ClusterIP
+   port: 8000

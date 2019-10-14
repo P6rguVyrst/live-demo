@@ -1,0 +1,89 @@
+diff --git a/instrumentation/charts/incubator/wagtail/templates/deployment.yaml b/instrumentation/charts/incubator/wagtail/templates/deployment.yaml
+index 938316b..53de42d 100644
+--- a/instrumentation/charts/incubator/wagtail/templates/deployment.yaml
++++ b/instrumentation/charts/incubator/wagtail/templates/deployment.yaml
+@@ -25,17 +25,17 @@ spec:
+           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+           imagePullPolicy: {{ .Values.image.pullPolicy }}
+           ports:
+-            - name: http
+-              containerPort: 80
++            - name: container-port
++              containerPort: {{ .Values.service.port }}
+               protocol: TCP
+           livenessProbe:
+             httpGet:
+               path: /
+-              port: http
++              port: container-port
+           readinessProbe:
+             httpGet:
+               path: /
+-              port: http
++              port: container-port
+           resources:
+             {{- toYaml .Values.resources | nindent 12 }}
+       {{- with .Values.nodeSelector }}
+diff --git a/instrumentation/charts/incubator/wagtail/templates/service.yaml b/instrumentation/charts/incubator/wagtail/templates/service.yaml
+index 91878d8..c386412 100644
+--- a/instrumentation/charts/incubator/wagtail/templates/service.yaml
++++ b/instrumentation/charts/incubator/wagtail/templates/service.yaml
+@@ -8,9 +8,9 @@ spec:
+   type: {{ .Values.service.type }}
+   ports:
+     - port: {{ .Values.service.port }}
+-      targetPort: http
++      targetPort: container-port
+       protocol: TCP
+-      name: http
++      name: exposed-service
+   selector:
+     app.kubernetes.io/name: {{ include "wagtail.name" . }}
+     app.kubernetes.io/instance: {{ .Release.Name }}
+diff --git a/instrumentation/values.yaml b/instrumentation/values.yaml
+new file mode 100644
+index 0000000..e64c153
+--- /dev/null
++++ b/instrumentation/values.yaml
+@@ -0,0 +1,28 @@
++fullnameOverride: "web"
++image:
++  repository: p6rguvyrst/demo
++  tag: v0.3.0
++  pullPolicy: IfNotPresent
++service:
++  type: ClusterIP
++  port: 8000
++resources:
++  requests:
++    cpu: 100m
++    memory: 1024Mi
++##ingress:
++#  enabled: true
++#  annotations:
++#    certmanager.k8s.io/cluster-issuer: letsencrypt-prod
++#    certmanager.k8s.io/acme-challenge-type: http01
++#    kubernetes.io/ingress.class: "nginx"
++#    kubernetes.io/tls-acme: "true"
++#    kubernetes.io/ssl-redirect: "true"
++#  hosts:
++#    - host: demo.devs.navenio.cloud
++#      paths:
++#        - /
++#  tls:
++#    - secretName: tls-demo-instrumentation
++#      hosts:
++#        - demo.devs.navenio.cloud
+diff --git a/patch/1_deployable_project.patch b/patch/1_deployable_project.patch
+index 61bbcc6..af1d158 100644
+--- a/patch/1_deployable_project.patch
++++ b/patch/1_deployable_project.patch
+@@ -53,7 +53,7 @@ index 0000000..69b7c51
+ +  tag: v0.3.0
+ +  pullPolicy: IfNotPresent
+ +service:
+-+  type: ClusterIP 
+++  type: ClusterIP
+ +  port: 8000
+ +resources:
+ +  requests:

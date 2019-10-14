@@ -1,0 +1,150 @@
+diff --git a/instrumentation/charts/incubator/wagtail/templates/ingress.yaml b/instrumentation/charts/incubator/wagtail/templates/ingress.yaml
+index d67a7c6..8e233b6 100644
+--- a/instrumentation/charts/incubator/wagtail/templates/ingress.yaml
++++ b/instrumentation/charts/incubator/wagtail/templates/ingress.yaml
+@@ -30,7 +30,7 @@ spec:
+           - path: {{ . }}
+             backend:
+               serviceName: {{ $fullName }}
+-              servicePort: http
++              servicePort: container-port
+         {{- end }}
+   {{- end }}
+ {{- end }}
+diff --git a/instrumentation/instrumentation/instrumentation/__init__.py b/instrumentation/instrumentation/instrumentation/__init__.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/instrumentation/instrumentation/instrumentation/labels.py b/instrumentation/instrumentation/instrumentation/labels.py
+new file mode 100644
+index 0000000..a8e46ae
+--- /dev/null
++++ b/instrumentation/instrumentation/instrumentation/labels.py
+@@ -0,0 +1,11 @@
++"""
++Single source of truth for metrics labels.
++
++"""
++
++ARTICLE = "article"
++ARTICLE_INDEX = "article-index"
++FORM = "form"
++FORM_FIELD = "form-field"
++EMAIL = "email"
++WEBPAGE = "webpage"
+diff --git a/instrumentation/values.yaml b/instrumentation/values.yaml
+index d9965ab..d318940 100644
+--- a/instrumentation/values.yaml
++++ b/instrumentation/values.yaml
+@@ -1,7 +1,7 @@
+ fullnameOverride: "web"
+ image:
+   repository: p6rguvyrst/demo
+-  tag: v0.3.3
++  tag: v0.3.4
+   pullPolicy: IfNotPresent
+ service:
+   type: ClusterIP
+@@ -10,19 +10,19 @@ resources:
+   requests:
+     cpu: 100m
+     memory: 1024Mi
+-##ingress:
+-#  enabled: true
+-#  annotations:
+-#    certmanager.k8s.io/cluster-issuer: letsencrypt-prod
+-#    certmanager.k8s.io/acme-challenge-type: http01
+-#    kubernetes.io/ingress.class: "nginx"
+-#    kubernetes.io/tls-acme: "true"
+-#    kubernetes.io/ssl-redirect: "true"
+-#  hosts:
+-#    - host: demo.devs.navenio.cloud
+-#      paths:
+-#        - /
+-#  tls:
+-#    - secretName: tls-demo-instrumentation
+-#      hosts:
+-#        - demo.devs.navenio.cloud
++ingress:
++  enabled: true
++  annotations:
++    certmanager.k8s.io/cluster-issuer: letsencrypt-prod
++    certmanager.k8s.io/acme-challenge-type: http01
++    kubernetes.io/ingress.class: "nginx"
++    kubernetes.io/tls-acme: "true"
++    kubernetes.io/ssl-redirect: "true"
++  hosts:
++    - host: demo.devs.navenio.cloud
++      paths:
++        - /
++  tls:
++    - secretName: tls-demo-instrumentation
++      hosts:
++        - demo.devs.navenio.cloud
+diff --git a/instrumentation/website/models.py b/instrumentation/website/models.py
+index ad8febc..4499f0c 100644
+--- a/instrumentation/website/models.py
++++ b/instrumentation/website/models.py
+@@ -10,9 +10,18 @@ from coderedcms.models import (
+     CoderedFormPage,
+     CoderedWebPage
+ )
++from django_prometheus.models import ExportModelOperationsMixin
++from instrumentation.instrumentation.labels import (
++    ARTICLE,
++    ARTICLE_INDEX,
++    FORM,
++    FORM_FIELD,
++    EMAIL,
++    WEBPAGE,
++)
+ 
+ 
+-class ArticlePage(CoderedArticlePage):
++class ArticlePage(ExportModelOperationsMixin(ARTICLE), CoderedArticlePage):
+     """
+     Article, suitable for news or blog content.
+     """
+@@ -28,7 +37,7 @@ class ArticlePage(CoderedArticlePage):
+     search_template = 'coderedcms/pages/article_page.search.html'
+ 
+ 
+-class ArticleIndexPage(CoderedArticleIndexPage):
++class ArticleIndexPage(ExportModelOperationsMixin(ARTICLE_INDEX), CoderedArticleIndexPage):
+     """
+     Shows a list of article sub-pages.
+     """
+@@ -44,7 +53,7 @@ class ArticleIndexPage(CoderedArticleIndexPage):
+     template = 'coderedcms/pages/article_index_page.html'
+ 
+ 
+-class FormPage(CoderedFormPage):
++class FormPage(ExportModelOperationsMixin(FORM), CoderedFormPage):
+     """
+     A page with an html <form>.
+     """
+@@ -54,7 +63,7 @@ class FormPage(CoderedFormPage):
+     template = 'coderedcms/pages/form_page.html'
+ 
+ 
+-class FormPageField(CoderedFormField):
++class FormPageField(ExportModelOperationsMixin(FORM_FIELD), CoderedFormField):
+     """
+     A field that links to a FormPage.
+     """
+@@ -64,14 +73,14 @@ class FormPageField(CoderedFormField):
+     page = ParentalKey('FormPage', related_name='form_fields')
+ 
+ 
+-class FormConfirmEmail(CoderedEmail):
++class FormConfirmEmail(ExportModelOperationsMixin(EMAIL), CoderedEmail):
+     """
+     Sends a confirmation email after submitting a FormPage.
+     """
+     page = ParentalKey('FormPage', related_name='confirmation_emails')
+ 
+ 
+-class WebPage(CoderedWebPage):
++class WebPage(ExportModelOperationsMixin(WEBPAGE), CoderedWebPage):
+     """
+     General use page with featureful streamfield and SEO attributes.
+     Template renders all Navbar and Footer snippets in existance.
