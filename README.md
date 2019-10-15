@@ -11,10 +11,11 @@
     cd instrumentation/charts/incubator
     helm create wagtail
     cd ../../
+    git add .
     git commit -m "Vanilla Python project and a helm chart for deployment."
     helm upgrade demo --namespace toomas --install charts/incubator/wagtail -f values.yaml
 
 ## Start patching and deploying.
 
-    git apply patcch/1_deployable_chart.patch
-    ...# Instrumentation Demo:
+    git apply patch/1_deployable_chart.patch
+    ...
